@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  RENTER
+  LANDLORD
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum ListingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ListingType {
+  House
+  Apartment
+}
+
+enum Currency {
+  NGN
+  USD
+}
+
+enum TokenType {
+  EMAIL_VERIFY
+  PASSWORD_RESET
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  CANCELLED
+  COMPLETED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  REFUNDED
+}
+
+model User {
+  id            String      @id @default(uuid())
+  email         String      @unique
+  passwordHash  String
+  role          UserRole    @default(RENTER)
+  status        UserStatus  @default(ACTIVE)
+  emailVerified Boolean     @default(false)
+  name          String?
+  phone         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  listings      Listing[]   @relation("OwnerListings")
+  bookings      Booking[]   @relation("RenterBookings")
+  reviews       Review[]
+  tokens        Token[]
+}
+
+model Listing {
+  id            String        @id @default(uuid())
+  ownerId       String
+  owner         User          @relation("OwnerListings", fields: [ownerId], references: [id])
+  status        ListingStatus @default(PENDING)
+
+  title         String
+  description   String
+  location      String
+  pricePerNight Int
+  currency      Currency      @default(NGN)
+  rooms         Int
+  bathrooms     Int
+  type          ListingType
+  images        String[]
+  amenities     String[]
+  rules         String[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  bookings      Booking[]
+  reviews       Review[]
+
+  @@index([ownerId])
+  @@index([status])
+  @@index([location])
+}
+
+model Booking {
+  id            String        @id @default(uuid())
+  listingId     String
+  listing       Listing       @relation(fields: [listingId], references: [id])
+  renterId      String
+  renter        User          @relation("RenterBookings", fields: [renterId], references: [id])
+
+  startDate     DateTime
+  endDate       DateTime
+  nights        Int
+  subtotal      Int
+  serviceFee    Int
+  total         Int
+
+  status        BookingStatus @default(PENDING)
+  paymentStatus PaymentStatus @default(UNPAID)
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([listingId])
+  @@index([renterId])
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id])
+  renterId  String
+  renter    User     @relation(fields: [renterId], references: [id])
+  rating    Int
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([listingId])
+  @@index([renterId])
+}
+
+model Token {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  type      TokenType
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([type])
+}

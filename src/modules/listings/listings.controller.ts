@@ -1,0 +1,170 @@
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+
+import { AuthUserParam } from '../../common/decorators/auth-user.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import type { AuthUser } from '../../common/types/auth';
+import { UserRole } from '../../common/types/auth';
+
+import { ListingsService } from './listings.service';
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new BadRequestException('invalid body');
+  }
+  return value as Record<string, unknown>;
+}
+
+function readString(value: unknown, fallback = '') {
+  return typeof value === 'string' ? value : fallback;
+}
+
+function readNumber(value: unknown, fallback = 0) {
+  const n =
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string'
+        ? Number(value)
+        : NaN;
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function readStringArray(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((v) => typeof v === 'string').map((v) => v);
+}
+
+type ListingPatch = Partial<{
+  title: string;
+  description: string;
+  location: string;
+  pricePerNight: number;
+  currency: 'NGN' | 'USD';
+  rooms: number;
+  bathrooms: number;
+  type: 'House' | 'Apartment';
+  images: string[];
+  amenities: string[];
+  rules: string[];
+}>;
+
+@Controller('listings')
+export class ListingsController {
+  constructor(private readonly listings: ListingsService) {}
+
+  @Get()
+  async list(
+    @Query('q') q?: string,
+    @Query('location') location?: string,
+    @Query('minPrice') minPrice?: string,
+    @Query('maxPrice') maxPrice?: string,
+    @Query('type') type?: string,
+    @Query('rooms') rooms?: string,
+  ) {
+    const min = minPrice != null ? Number(minPrice) : undefined;
+    const max = maxPrice != null ? Number(maxPrice) : undefined;
+    const r = rooms != null ? Number(rooms) : undefined;
+    return await this.listings.listPublic({
+      q,
+      location,
+      minPrice: Number.isFinite(min) ? min : undefined,
+      maxPrice: Number.isFinite(max) ? max : undefined,
+      type,
+      rooms: Number.isFinite(r) ? r : undefined,
+    });
+  }
+
+  @Get('mine')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.LANDLORD)
+  async mine(@AuthUserParam() user: AuthUser) {
+    return await this.listings.listMine(user);
+  }
+
+  @Get(':id')
+  async get(@Param('id') id: string) {
+    return await this.listings.getById(id, null);
+  }
+
+  @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.LANDLORD)
+  async create(@AuthUserParam() user: AuthUser, @Body() body: unknown) {
+    const data = asRecord(body);
+
+    return await this.listings.create(user, {
+      title: readString(data.title),
+      description: readString(data.description),
+      location: readString(data.location),
+      pricePerNight: readNumber(data.pricePerNight),
+      currency: data.currency === 'USD' ? 'USD' : 'NGN',
+      rooms: readNumber(data.rooms),
+      bathrooms: readNumber(data.bathrooms),
+      type: data.type === 'House' ? 'House' : 'Apartment',
+      images: readStringArray(data.images),
+      amenities: readStringArray(data.amenities),
+      rules: readStringArray(data.rules),
+    });
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.LANDLORD, UserRole.ADMIN)
+  async update(
+    @AuthUserParam() user: AuthUser,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ) {
+    const data = asRecord(body);
+    const patch: ListingPatch = {};
+
+    if (data.title != null) patch.title = readString(data.title);
+    if (data.description != null) patch.description = readString(data.description);
+    if (data.location != null) patch.location = readString(data.location);
+    if (data.pricePerNight != null) patch.pricePerNight = readNumber(data.pricePerNight);
+    if (data.currency != null) patch.currency = data.currency === 'USD' ? 'USD' : 'NGN';
+    if (data.rooms != null) patch.rooms = readNumber(data.rooms);
+    if (data.bathrooms != null) patch.bathrooms = readNumber(data.bathrooms);
+    if (data.type != null) patch.type = data.type === 'House' ? 'House' : 'Apartment';
+    if (data.images != null) patch.images = readStringArray(data.images);
+    if (data.amenities != null) patch.amenities = readStringArray(data.amenities);
+    if (data.rules != null) patch.rules = readStringArray(data.rules);
+
+    return await this.listings.update(user, id, patch);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.LANDLORD, UserRole.ADMIN)
+  async remove(@AuthUserParam() user: AuthUser, @Param('id') id: string) {
+    return await this.listings.remove(user, id);
+  }
+
+  @Patch(':id/status')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async setStatus(
+    @AuthUserParam() user: AuthUser,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ) {
+    const data = asRecord(body);
+    const status = data.status;
+    if (status !== 'APPROVED' && status !== 'REJECTED') {
+      throw new BadRequestException('status must be APPROVED or REJECTED');
+    }
+    return await this.listings.setStatus(user, id, status);
+  }
+}
