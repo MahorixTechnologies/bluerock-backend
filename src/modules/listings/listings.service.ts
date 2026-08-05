@@ -17,11 +17,36 @@ type CreateListingInput = {
   currency: 'NGN' | 'USD';
   rooms: number;
   bathrooms: number;
-  type: 'House' | 'Apartment';
+  type:
+    | 'EntireProperty'
+    | 'Apartment'
+    | 'House'
+    | 'Duplex'
+    | 'Studio'
+    | 'SingleRoom'
+    | 'SharedRoom'
+    | 'Hostel'
+    | 'StudentHousing'
+    | 'HotelRoom'
+    | 'Other';
   images: string[];
   amenities: string[];
   rules: string[];
 };
+
+const PUBLIC_TYPES: readonly CreateListingInput['type'][] = [
+  'EntireProperty',
+  'Apartment',
+  'House',
+  'Duplex',
+  'Studio',
+  'SingleRoom',
+  'SharedRoom',
+  'Hostel',
+  'StudentHousing',
+  'HotelRoom',
+  'Other',
+] as const;
 
 @Injectable()
 export class ListingsService {
@@ -38,13 +63,14 @@ export class ListingsService {
     const q = params.q?.trim();
     const location = params.location?.trim();
     const listingType =
-      params.type === 'House' || params.type === 'Apartment'
-        ? params.type
+      typeof params.type === 'string' &&
+      PUBLIC_TYPES.includes(params.type as CreateListingInput['type'])
+        ? (params.type as CreateListingInput['type'])
         : undefined;
 
     return await this.prisma.listing.findMany({
       where: {
-        status: 'APPROVED',
+        status: { in: ['APPROVED', 'Published'] },
         ...(q
           ? {
               OR: [
@@ -103,7 +129,9 @@ export class ListingsService {
 
     if (!listing) throw new NotFoundException('listing not found');
 
-    if (listing.status !== 'APPROVED') {
+    const isPublic =
+      listing.status === 'APPROVED' || listing.status === 'Published';
+    if (!isPublic) {
       if (!viewer) throw new NotFoundException('listing not found');
       if (viewer.role !== UserRole.ADMIN && viewer.id !== listing.ownerId) {
         throw new NotFoundException('listing not found');
@@ -174,8 +202,10 @@ export class ListingsService {
       throw new ForbiddenException('not allowed');
     }
 
-    await this.prisma.listing.delete({ where: { id } });
-    return { success: true };
+    return await this.prisma.listing.update({
+      where: { id },
+      data: { status: 'ARCHIVED' },
+    });
   }
 
   async setStatus(admin: AuthUser, id: string, status: 'APPROVED' | 'REJECTED') {

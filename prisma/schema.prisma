@@ -19,14 +19,33 @@ enum UserStatus {
 }
 
 enum ListingStatus {
+  Draft
+  PendingVerification
+  Ready
   PENDING
   APPROVED
+  Published
+  Unavailable
+  ARCHIVED
+  Archived
   REJECTED
+  Rejected
+  Suspended
+  Expired
 }
 
 enum ListingType {
-  House
+  EntireProperty
   Apartment
+  House
+  Duplex
+  Studio
+  SingleRoom
+  SharedRoom
+  Hostel
+  StudentHousing
+  HotelRoom
+  Other
 }
 
 enum Currency {
@@ -135,6 +154,7 @@ model Review {
 
   @@index([listingId])
   @@index([renterId])
+  @@unique([listingId, renterId])
 }
 
 model Token {
@@ -149,4 +169,5 @@ model Token {
 
   @@index([userId])
   @@index([type])
+  @@index([userId, type])
 }

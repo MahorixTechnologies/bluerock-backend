@@ -16,11 +16,41 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+const WEAK_PASSWORDS = new Set([
+  'password',
+  'password123',
+  '123456',
+  '12345678',
+  'qwerty',
+  'qwerty123',
+  'abc123',
+  'letmein',
+  'welcome',
+  'admin',
+  'admin123',
+  'iloveyou',
+  'monkey',
+  'dragon',
+  'master',
+  'bluerock',
+  'bluerock123',
+]);
+
 function requirePassword(password: unknown) {
-  if (typeof password !== 'string' || password.trim().length < 6) {
-    throw new BadRequestException('password must be at least 6 characters');
+  if (typeof password !== 'string') {
+    throw new BadRequestException('password must be at least 8 characters');
   }
-  return password;
+  const value = password;
+  if (value.length < 8) {
+    throw new BadRequestException('password must be at least 8 characters');
+  }
+  if (value.length > 128) {
+    throw new BadRequestException('password is too long');
+  }
+  if (WEAK_PASSWORDS.has(value.toLowerCase())) {
+    throw new BadRequestException('choose a stronger password');
+  }
+  return value;
 }
 
 function makeToken() {
@@ -43,7 +73,10 @@ export class AuthService {
   }) {
     const email = normalizeEmail(params.email);
     const password = requirePassword(params.password);
-    const role = params.role ?? UserRole.RENTER;
+    let role = params.role ?? UserRole.RENTER;
+    if (role === UserRole.ADMIN) {
+      role = UserRole.RENTER;
+    }
 
     if (
       role === UserRole.LANDLORD &&
@@ -109,12 +142,12 @@ export class AuthService {
       throw new UnauthorizedException('invalid credentials');
     }
 
-    if (user.status !== 'ACTIVE') {
-      throw new UnauthorizedException('account is suspended');
-    }
-
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) {
+      throw new UnauthorizedException('invalid credentials');
+    }
+
+    if (user.status !== 'ACTIVE') {
       throw new UnauthorizedException('invalid credentials');
     }
 

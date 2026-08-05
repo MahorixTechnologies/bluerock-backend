@@ -25,9 +25,7 @@ export class AuthController {
     }
 
     const resolvedRole =
-      role === UserRole.LANDLORD || role === UserRole.ADMIN || role === UserRole.RENTER
-        ? role
-        : undefined;
+      role === UserRole.LANDLORD || role === UserRole.RENTER ? role : undefined;
 
     return await this.auth.register({
       email,

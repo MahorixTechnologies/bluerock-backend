@@ -44,7 +44,7 @@ export class BookingsService {
     const listing = await this.prisma.listing.findUnique({
       where: { id: params.listingId },
     });
-    if (!listing || listing.status !== 'APPROVED') {
+    if (!listing || (listing.status !== 'APPROVED' && listing.status !== 'Published')) {
       throw new NotFoundException('listing not found');
     }
 

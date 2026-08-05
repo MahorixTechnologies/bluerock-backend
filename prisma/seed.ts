@@ -41,6 +41,55 @@ async function ensureUser(params: {
   });
 }
 
+type ListingSeed = {
+  id: string;
+  ownerId: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
+  title: string;
+  description: string;
+  location: string;
+  pricePerNight: number;
+  currency: 'NGN' | 'USD';
+  rooms: number;
+  bathrooms: number;
+  type:
+    | 'EntireProperty'
+    | 'Apartment'
+    | 'House'
+    | 'Duplex'
+    | 'Studio'
+    | 'SingleRoom'
+    | 'SharedRoom'
+    | 'Hostel'
+    | 'StudentHousing'
+    | 'HotelRoom'
+    | 'Other';
+  imageSeed: string;
+  amenities: string[];
+  rules: string[];
+};
+
+async function ensureListing(data: ListingSeed) {
+  const { imageSeed, ...rest } = data;
+  const payload = {
+    ...rest,
+    images: [`https://picsum.photos/seed/${imageSeed}/800/500`],
+  };
+  return await prisma.listing.upsert({
+    where: { id: data.id },
+    update: payload,
+    create: payload,
+    select: {
+      id: true,
+      title: true,
+      location: true,
+      pricePerNight: true,
+      currency: true,
+      ownerId: true,
+    },
+  });
+}
+
 async function main() {
   const admin = await ensureUser({
     email: 'admin@bluerock.com',
@@ -88,197 +137,72 @@ async function main() {
     status: 'SUSPENDED',
   });
 
-  const listing1 = await prisma.listing.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000001' },
-    update: {
-      ownerId: landlord.id,
-      status: 'APPROVED',
-      title: 'Modern 2BR Apartment',
-      description: 'A clean, bright 2 bedroom apartment near the city center.',
-      location: 'Lekki, Lagos',
-      pricePerNight: 45000,
-      currency: 'NGN',
-      rooms: 2,
-      bathrooms: 2,
-      type: 'Apartment',
-      images: ['https://picsum.photos/seed/bluerock-apt/800/500'],
-      amenities: ['WiFi', 'Air conditioning', 'Kitchen'],
-      rules: ['No smoking', 'No parties'],
-    },
-    create: {
+  const listingDefinitions: ListingSeed[] = [
+    {
       id: '00000000-0000-0000-0000-000000000001',
       ownerId: landlord.id,
       status: 'APPROVED',
       title: 'Modern 2BR Apartment',
-      description: 'A clean, bright 2 bedroom apartment near the city center.',
+      description:
+        'A clean, bright 2 bedroom apartment near the city center with open kitchen, large windows, and modern finishes.',
       location: 'Lekki, Lagos',
       pricePerNight: 45000,
       currency: 'NGN',
       rooms: 2,
       bathrooms: 2,
       type: 'Apartment',
-      images: ['https://picsum.photos/seed/bluerock-apt/800/500'],
-      amenities: ['WiFi', 'Air conditioning', 'Kitchen'],
+      imageSeed: 'bluerock-apt',
+      amenities: ['WiFi', 'Air conditioning', 'Kitchen', 'Parking', '24/7 Security'],
       rules: ['No smoking', 'No parties'],
     },
-    select: {
-      id: true,
-      title: true,
-      location: true,
-      pricePerNight: true,
-      currency: true,
-      ownerId: true,
-    },
-  });
-
-  const listing2 = await prisma.listing.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000002' },
-    update: {
-      ownerId: landlord.id,
-      status: 'APPROVED',
-      title: 'Quiet Family House',
-      description:
-        'A spacious house with great ventilation and a calm environment.',
-      location: 'Ikeja, Lagos',
-      pricePerNight: 60000,
-      currency: 'NGN',
-      rooms: 3,
-      bathrooms: 3,
-      type: 'House',
-      images: ['https://picsum.photos/seed/bluerock-house/800/500'],
-      amenities: ['Parking', 'Generator', 'Security'],
-      rules: ['No pets', 'No parties'],
-    },
-    create: {
+    {
       id: '00000000-0000-0000-0000-000000000002',
       ownerId: landlord.id,
       status: 'APPROVED',
-      title: 'Quiet Family House',
+      title: 'Cozy 3BR House with Garden',
       description:
-        'A spacious house with great ventilation and a calm environment.',
+        'A spacious three-bedroom family home featuring a private garden, sunlit living areas, secure driveway, and quiet residential street.',
       location: 'Ikeja, Lagos',
-      pricePerNight: 60000,
+      pricePerNight: 75000,
       currency: 'NGN',
       rooms: 3,
       bathrooms: 3,
       type: 'House',
-      images: ['https://picsum.photos/seed/bluerock-house/800/500'],
-      amenities: ['Parking', 'Generator', 'Security'],
+      imageSeed: 'bluerock-cozy-3br-house',
+      amenities: ['Parking', 'Generator', 'Security', 'Garden', 'WiFi', 'Kitchen'],
       rules: ['No pets', 'No parties'],
     },
-    select: {
-      id: true,
-      title: true,
-      location: true,
-      pricePerNight: true,
-      currency: true,
-      ownerId: true,
-    },
-  });
-
-  const listing3 = await prisma.listing.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000003' },
-    update: {
-      ownerId: landlord2.id,
-      status: 'PENDING',
-      title: 'Cozy Studio Near Transit',
-      description:
-        'A compact studio with easy access to transit and restaurants.',
-      location: 'Yaba, Lagos',
-      pricePerNight: 28000,
-      currency: 'NGN',
-      rooms: 1,
-      bathrooms: 1,
-      type: 'Apartment',
-      images: ['https://picsum.photos/seed/bluerock-studio/800/500'],
-      amenities: ['WiFi', 'Workspace'],
-      rules: ['No smoking'],
-    },
-    create: {
+    {
       id: '00000000-0000-0000-0000-000000000003',
       ownerId: landlord2.id,
       status: 'PENDING',
-      title: 'Cozy Studio Near Transit',
+      title: 'Studio Apartment (City View)',
       description:
-        'A compact studio with easy access to transit and restaurants.',
+        'A compact, efficient studio with panoramic city views, built-in workstation, premium finishes, and easy access to transit lines and restaurants.',
       location: 'Yaba, Lagos',
-      pricePerNight: 28000,
+      pricePerNight: 30000,
       currency: 'NGN',
       rooms: 1,
       bathrooms: 1,
-      type: 'Apartment',
-      images: ['https://picsum.photos/seed/bluerock-studio/800/500'],
-      amenities: ['WiFi', 'Workspace'],
+      type: 'Studio',
+      imageSeed: 'bluerock-studio-city-view',
+      amenities: ['WiFi', 'Workspace', 'City view', 'Air conditioning'],
       rules: ['No smoking'],
     },
-    select: {
-      id: true,
-      title: true,
-      location: true,
-      pricePerNight: true,
-      currency: true,
-      ownerId: true,
-    },
-  });
-
-  const listing4 = await prisma.listing.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000004' },
-    update: {
-      ownerId: landlord2.id,
-      status: 'REJECTED',
-      title: 'Beachfront Getaway',
-      description: 'A beachside stay with an amazing view.',
-      location: 'Ajah, Lagos',
-      pricePerNight: 90000,
-      currency: 'NGN',
-      rooms: 2,
-      bathrooms: 2,
-      type: 'House',
-      images: ['https://picsum.photos/seed/bluerock-beach/800/500'],
-      amenities: ['WiFi', 'Ocean view'],
-      rules: ['No smoking', 'No parties'],
-    },
-    create: {
+    {
       id: '00000000-0000-0000-0000-000000000004',
-      ownerId: landlord2.id,
-      status: 'REJECTED',
-      title: 'Beachfront Getaway',
-      description: 'A beachside stay with an amazing view.',
-      location: 'Ajah, Lagos',
-      pricePerNight: 90000,
-      currency: 'NGN',
-      rooms: 2,
-      bathrooms: 2,
-      type: 'House',
-      images: ['https://picsum.photos/seed/bluerock-beach/800/500'],
-      amenities: ['WiFi', 'Ocean view'],
-      rules: ['No smoking', 'No parties'],
-    },
-    select: {
-      id: true,
-      title: true,
-      location: true,
-      pricePerNight: true,
-      currency: true,
-      ownerId: true,
-    },
-  });
-
-  const listing5 = await prisma.listing.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000005' },
-    update: {
       ownerId: landlord.id,
       status: 'APPROVED',
       title: 'Aurora Retreat',
       description:
-        'A refined multi-level home with warm wood finishes, tropical landscaping, and quiet luxury.',
+        'A refined multi-level home with warm wood finishes, tropical landscaping, infinity pool, cinema room, and quiet luxury overlooking the lagoon.',
       location: 'Banana Island, Lagos',
       pricePerNight: 3500000,
       currency: 'NGN',
       rooms: 5,
       bathrooms: 6,
       type: 'House',
-      images: ['https://picsum.photos/seed/bluerock-aurora-house/800/500'],
+      imageSeed: 'bluerock-aurora-house',
       amenities: [
         'Infinity pool',
         'Cinema room',
@@ -288,161 +212,148 @@ async function main() {
       ],
       rules: ['No smoking', 'No parties', 'Government ID required'],
     },
-    create: {
+    {
       id: '00000000-0000-0000-0000-000000000005',
-      ownerId: landlord.id,
-      status: 'APPROVED',
-      title: 'Aurora Retreat',
-      description:
-        'A refined multi-level home with warm wood finishes, tropical landscaping, and quiet luxury.',
-      location: 'Banana Island, Lagos',
-      pricePerNight: 3500000,
-      currency: 'NGN',
-      rooms: 5,
-      bathrooms: 6,
-      type: 'House',
-      images: ['https://picsum.photos/seed/bluerock-aurora-house/800/500'],
-      amenities: [
-        'Infinity pool',
-        'Cinema room',
-        'Smart home',
-        'Private chef kitchen',
-        'Security',
-      ],
-      rules: ['No smoking', 'No parties', 'Government ID required'],
-    },
-    select: {
-      id: true,
-      title: true,
-      location: true,
-      pricePerNight: true,
-      currency: true,
-      ownerId: true,
-    },
-  });
-
-  const listing6 = await prisma.listing.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000006' },
-    update: {
       ownerId: landlord2.id,
       status: 'APPROVED',
       title: 'Palmview Estate',
       description:
-        'A sculpted modern villa with tropical gardens, curved architecture, and sunset entertaining spaces.',
+        'A sculpted modern villa with tropical gardens, curved architecture, sunset entertaining spaces, pool terrace, and fire pit.',
       location: 'Epe, Lagos',
       pricePerNight: 1500,
       currency: 'USD',
       rooms: 4,
       bathrooms: 4,
       type: 'House',
-      images: ['https://picsum.photos/seed/bluerock-palmview-house/800/500'],
+      imageSeed: 'bluerock-palmview-house',
       amenities: ['Pool terrace', 'Fire pit', 'Outdoor lounge', 'Backup power'],
       rules: ['No pets', 'No events'],
     },
-    create: {
+    {
       id: '00000000-0000-0000-0000-000000000006',
       ownerId: landlord2.id,
-      status: 'APPROVED',
-      title: 'Palmview Estate',
+      status: 'PENDING',
+      title: 'The Courtyard Villa',
       description:
-        'A sculpted modern villa with tropical gardens, curved architecture, and sunset entertaining spaces.',
-      location: 'Epe, Lagos',
-      pricePerNight: 1500,
+        'A generous family house centered around a private courtyard, plunge pool, and shaded outdoor dining with full housekeeping support.',
+      location: 'Asokoro, Abuja',
+      pricePerNight: 280000,
+      currency: 'NGN',
+      rooms: 4,
+      bathrooms: 5,
+      type: 'House',
+      imageSeed: 'bluerock-courtyard-villa',
+      amenities: [
+        'Private courtyard',
+        'Pool',
+        'Housekeeping',
+        'Parking',
+        'Security',
+      ],
+      rules: ['No parties', 'Quiet hours after 10pm'],
+    },
+    {
+      id: '00000000-0000-0000-0000-000000000007',
+      ownerId: landlord.id,
+      status: 'APPROVED',
+      title: 'Harbor Glass Loft',
+      description:
+        'A sculptural glass-walled loft with double-height ceilings, harbor-facing balcony, premium appliances, and designer lighting throughout.',
+      location: 'Victoria Island, Lagos',
+      pricePerNight: 520000,
+      currency: 'NGN',
+      rooms: 2,
+      bathrooms: 2,
+      type: 'Apartment',
+      imageSeed: 'bluerock-harbor-glass-loft',
+      amenities: [
+        'Balcony',
+        'Gym',
+        'Concierge',
+        'WiFi',
+        'Smart home',
+        'Parking',
+      ],
+      rules: ['No parties', 'No smoking'],
+    },
+    {
+      id: '00000000-0000-0000-0000-000000000008',
+      ownerId: landlord2.id,
+      status: 'APPROVED',
+      title: 'Skyline Nest',
+      description:
+        'A high-rise urban retreat with wraparound skyline views, rooftop pool access, gym, and a short walk to restaurants and cafés.',
+      location: 'Eko Atlantic, Lagos',
+      pricePerNight: 980,
       currency: 'USD',
+      rooms: 2,
+      bathrooms: 2,
+      type: 'Apartment',
+      imageSeed: 'bluerock-skyline-nest',
+      amenities: ['Rooftop pool', 'Gym', 'Concierge', 'City view', 'WiFi'],
+      rules: ['No smoking', 'No pets', 'No parties'],
+    },
+    {
+      id: '00000000-0000-0000-0000-000000000009',
+      ownerId: landlord.id,
+      status: 'APPROVED',
+      title: 'Savana Ridge Home',
+      description:
+        'A tranquil hillside residence nestled into natural terrain with panoramic ridgeline views, outdoor fire lounge, and infinity-edge plunge pool.',
+      location: 'Maitama, Abuja',
+      pricePerNight: 410000,
+      currency: 'NGN',
       rooms: 4,
       bathrooms: 4,
       type: 'House',
-      images: ['https://picsum.photos/seed/bluerock-palmview-house/800/500'],
-      amenities: ['Pool terrace', 'Fire pit', 'Outdoor lounge', 'Backup power'],
-      rules: ['No pets', 'No events'],
-    },
-    select: {
-      id: true,
-      title: true,
-      location: true,
-      pricePerNight: true,
-      currency: true,
-      ownerId: true,
-    },
-  });
-
-  const listing7 = await prisma.listing.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000007' },
-    update: {
-      ownerId: landlord2.id,
-      status: 'PENDING',
-      title: 'The Courtyard Villa',
-      description:
-        'A generous family house centered around a private courtyard, plunge pool, and shaded outdoor dining.',
-      location: 'Asokoro, Abuja',
-      pricePerNight: 280000,
-      currency: 'NGN',
-      rooms: 4,
-      bathrooms: 5,
-      type: 'House',
-      images: ['https://picsum.photos/seed/bluerock-courtyard-villa/800/500'],
+      imageSeed: 'bluerock-savana-ridge-home',
       amenities: [
-        'Private courtyard',
-        'Pool',
-        'Housekeeping',
-        'Parking',
+        'Plunge pool',
+        'Fire lounge',
+        'Terrace',
+        'Backup power',
         'Security',
       ],
-      rules: ['No parties', 'Quiet hours after 10pm'],
+      rules: ['No loud events', 'No smoking inside'],
     },
-    create: {
-      id: '00000000-0000-0000-0000-000000000007',
+    {
+      id: '00000000-0000-0000-0000-000000000010',
       ownerId: landlord2.id,
-      status: 'PENDING',
-      title: 'The Courtyard Villa',
+      status: 'APPROVED',
+      title: 'Marina Pearl Residences',
       description:
-        'A generous family house centered around a private courtyard, plunge pool, and shaded outdoor dining.',
-      location: 'Asokoro, Abuja',
-      pricePerNight: 280000,
+        'Waterfront luxury apartments with private marina access, yacht parking, 24/7 concierge, rooftop lounge, and panoramic waterside terraces.',
+      location: 'Ikoyi, Lagos',
+      pricePerNight: 650000,
       currency: 'NGN',
-      rooms: 4,
-      bathrooms: 5,
-      type: 'House',
-      images: ['https://picsum.photos/seed/bluerock-courtyard-villa/800/500'],
+      rooms: 3,
+      bathrooms: 3,
+      type: 'EntireProperty',
+      imageSeed: 'bluerock-marina-pearl-residences',
       amenities: [
-        'Private courtyard',
-        'Pool',
-        'Housekeeping',
+        'Marina',
+        'Concierge',
+        'Rooftop lounge',
+        'Waterfront terrace',
+        'Gym',
         'Parking',
-        'Security',
       ],
-      rules: ['No parties', 'Quiet hours after 10pm'],
+      rules: ['No parties', 'Government ID required', 'No smoking'],
     },
-    select: {
-      id: true,
-      title: true,
-      location: true,
-      pricePerNight: true,
-      currency: true,
-      ownerId: true,
-    },
-  });
-
-  const listings = [
-    listing1,
-    listing2,
-    listing3,
-    listing4,
-    listing5,
-    listing6,
-    listing7,
   ];
+
+  const listings = await Promise.all(listingDefinitions.map((l) => ensureListing(l)));
 
   const booking1Start = new Date(Date.UTC(2026, 6, 10));
   const booking1End = new Date(Date.UTC(2026, 6, 13));
-  const b1Subtotal = 3 * listing1.pricePerNight;
+  const b1Subtotal = 3 * listings[0].pricePerNight;
   const b1Fee = Math.round(b1Subtotal * 0.1);
   const b1Total = b1Subtotal + b1Fee;
 
   const booking1 = await prisma.booking.upsert({
     where: { id: '00000000-0000-0000-0000-0000000000b1' },
     update: {
-      listingId: listing1.id,
+      listingId: listings[0].id,
       renterId: renter.id,
       startDate: booking1Start,
       endDate: booking1End,
@@ -455,7 +366,7 @@ async function main() {
     },
     create: {
       id: '00000000-0000-0000-0000-0000000000b1',
-      listingId: listing1.id,
+      listingId: listings[0].id,
       renterId: renter.id,
       startDate: booking1Start,
       endDate: booking1End,
@@ -471,14 +382,14 @@ async function main() {
 
   const booking2Start = new Date(Date.UTC(2026, 6, 20));
   const booking2End = new Date(Date.UTC(2026, 6, 22));
-  const b2Subtotal = 2 * listing2.pricePerNight;
+  const b2Subtotal = 2 * listings[1].pricePerNight;
   const b2Fee = Math.round(b2Subtotal * 0.1);
   const b2Total = b2Subtotal + b2Fee;
 
   const booking2 = await prisma.booking.upsert({
     where: { id: '00000000-0000-0000-0000-0000000000b2' },
     update: {
-      listingId: listing2.id,
+      listingId: listings[1].id,
       renterId: renter2.id,
       startDate: booking2Start,
       endDate: booking2End,
@@ -491,7 +402,7 @@ async function main() {
     },
     create: {
       id: '00000000-0000-0000-0000-0000000000b2',
-      listingId: listing2.id,
+      listingId: listings[1].id,
       renterId: renter2.id,
       startDate: booking2Start,
       endDate: booking2End,
@@ -507,14 +418,14 @@ async function main() {
 
   const booking3Start = new Date(Date.UTC(2026, 6, 25));
   const booking3End = new Date(Date.UTC(2026, 6, 27));
-  const b3Subtotal = 2 * listing1.pricePerNight;
+  const b3Subtotal = 2 * listings[0].pricePerNight;
   const b3Fee = Math.round(b3Subtotal * 0.1);
   const b3Total = b3Subtotal + b3Fee;
 
   const booking3 = await prisma.booking.upsert({
     where: { id: '00000000-0000-0000-0000-0000000000b3' },
     update: {
-      listingId: listing1.id,
+      listingId: listings[0].id,
       renterId: renter2.id,
       startDate: booking3Start,
       endDate: booking3End,
@@ -527,7 +438,7 @@ async function main() {
     },
     create: {
       id: '00000000-0000-0000-0000-0000000000b3',
-      listingId: listing1.id,
+      listingId: listings[0].id,
       renterId: renter2.id,
       startDate: booking3Start,
       endDate: booking3End,
@@ -543,14 +454,14 @@ async function main() {
 
   const booking4Start = new Date(Date.UTC(2026, 5, 2));
   const booking4End = new Date(Date.UTC(2026, 5, 5));
-  const b4Subtotal = 3 * listing2.pricePerNight;
+  const b4Subtotal = 3 * listings[1].pricePerNight;
   const b4Fee = Math.round(b4Subtotal * 0.1);
   const b4Total = b4Subtotal + b4Fee;
 
   const booking4 = await prisma.booking.upsert({
     where: { id: '00000000-0000-0000-0000-0000000000b4' },
     update: {
-      listingId: listing2.id,
+      listingId: listings[1].id,
       renterId: renter.id,
       startDate: booking4Start,
       endDate: booking4End,
@@ -563,7 +474,7 @@ async function main() {
     },
     create: {
       id: '00000000-0000-0000-0000-0000000000b4',
-      listingId: listing2.id,
+      listingId: listings[1].id,
       renterId: renter.id,
       startDate: booking4Start,
       endDate: booking4End,
@@ -581,14 +492,14 @@ async function main() {
     data: [
       {
         id: '00000000-0000-0000-0000-0000000000r1',
-        listingId: listing1.id,
+        listingId: listings[0].id,
         renterId: renter.id,
         rating: 5,
         body: 'Very clean place, great host communication. Would stay again.',
       },
       {
         id: '00000000-0000-0000-0000-0000000000r2',
-        listingId: listing2.id,
+        listingId: listings[1].id,
         renterId: renter2.id,
         rating: 4,
         body: 'Nice location and spacious rooms. Check-in was smooth.',

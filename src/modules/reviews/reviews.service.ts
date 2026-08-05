@@ -13,7 +13,12 @@ export class ReviewsService {
       where: { id: listingId },
       select: { id: true, status: true },
     });
-    if (!listing || listing.status !== 'APPROVED') throw new NotFoundException('listing not found');
+    if (
+      !listing ||
+      (listing.status !== 'APPROVED' && listing.status !== 'Published')
+    ) {
+      throw new NotFoundException('listing not found');
+    }
 
     return await this.prisma.review.findMany({
       where: { listingId },

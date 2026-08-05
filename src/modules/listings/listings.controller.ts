@@ -54,11 +54,43 @@ type ListingPatch = Partial<{
   currency: 'NGN' | 'USD';
   rooms: number;
   bathrooms: number;
-  type: 'House' | 'Apartment';
+  type:
+    | 'EntireProperty'
+    | 'Apartment'
+    | 'House'
+    | 'Duplex'
+    | 'Studio'
+    | 'SingleRoom'
+    | 'SharedRoom'
+    | 'Hostel'
+    | 'StudentHousing'
+    | 'HotelRoom'
+    | 'Other';
   images: string[];
   amenities: string[];
   rules: string[];
 }>;
+
+const VALID_LISTING_TYPES = new Set<ListingPatch['type']>([
+  'EntireProperty',
+  'Apartment',
+  'House',
+  'Duplex',
+  'Studio',
+  'SingleRoom',
+  'SharedRoom',
+  'Hostel',
+  'StudentHousing',
+  'HotelRoom',
+  'Other',
+]);
+
+function readListingType(value: unknown): NonNullable<ListingPatch['type']> {
+  if (typeof value === 'string' && VALID_LISTING_TYPES.has(value as ListingPatch['type'])) {
+    return value as NonNullable<ListingPatch['type']>;
+  }
+  return 'Apartment';
+}
 
 @Controller('listings')
 export class ListingsController {
@@ -112,7 +144,7 @@ export class ListingsController {
       currency: data.currency === 'USD' ? 'USD' : 'NGN',
       rooms: readNumber(data.rooms),
       bathrooms: readNumber(data.bathrooms),
-      type: data.type === 'House' ? 'House' : 'Apartment',
+      type: readListingType(data.type),
       images: readStringArray(data.images),
       amenities: readStringArray(data.amenities),
       rules: readStringArray(data.rules),
@@ -137,7 +169,7 @@ export class ListingsController {
     if (data.currency != null) patch.currency = data.currency === 'USD' ? 'USD' : 'NGN';
     if (data.rooms != null) patch.rooms = readNumber(data.rooms);
     if (data.bathrooms != null) patch.bathrooms = readNumber(data.bathrooms);
-    if (data.type != null) patch.type = data.type === 'House' ? 'House' : 'Apartment';
+    if (data.type != null) patch.type = readListingType(data.type);
     if (data.images != null) patch.images = readStringArray(data.images);
     if (data.amenities != null) patch.amenities = readStringArray(data.amenities);
     if (data.rules != null) patch.rules = readStringArray(data.rules);
